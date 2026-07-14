@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniCalc Pro</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-display: #0f3460;
+    --text-primary: #ffffff;
+    --text-secondary: #a0aec0;
+    --btn-number: #2d3748;
+    --btn-number-hover: #4a5568;
+    --btn-operator: #e53e3e;
+    --btn-operator-hover: #c53030;
+    --btn-function: #3182ce;
+    --btn-function-hover: #2b6cb0;
+    --btn-equals: #38a169;
+    --btn-equals-hover: #2f855a;
+    --btn-clear: #d69e2e;
+    --btn-clear-hover: #b7791f;
+    --accent: #e53e3e;
+    --shadow-color: rgba(0,0,0,0.3);
+    --glow-color: rgba(229,62,62,0.4);
+    --radius-btn: 14px;
+    --btn-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-main: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-main);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    transition: background 0.5s ease;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, var(--glow-color) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(49,130,206,0.15) 0%, transparent 50%);
+    animation: bgFloat 20s ease-in-out infinite;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  @keyframes bgFloat {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(2%, -2%) rotate(1deg); }
+    66% { transform: translate(-1%, 1%) rotate(-1deg); }
+  }
+
+  .app-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  /* Header */
+  .calc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), #38a169);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+
+  .logo span { font-weight: 400; opacity: 0.7; }
+
+  .header-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: var(--btn-transition);
+  }
+
+  .icon-btn:hover {
+    background: var(--accent);
+    transform: scale(1.05);
+  }
+
+  /* Calculator Body */
+  .calc-body {
+    background: var(--bg-secondary);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: 0 25px 60px var(--shadow-color),
+                0 0 0 1px rgba(255,255,255,0.05);
+    transition: all 0.5s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .calc-body::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  }
+
+  /* Display */
+  .display-container {
+    background: var(--bg-display);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 20px;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+  }
+
+  .display-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.2));
+    pointer-events: none;
+  }
+
+  .history-display {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    max-height: 50px;
+    overflow-y: auto;
+    width: 100%;
+    text-align: right;
+    opacity: 0.7;
+  }
+
+  .expression-display {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    word-break: break-all;
+    text-align: right;
+    width: 100%;
+    min-height: 28px;
+    transition: all 0.3s ease;
+  }
+
+  .result-display {
+    font-family: var(--font-mono);
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: right;
+    width: 100%;
+    line-height: 1.1;
+    word-break: break-all;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .result-display.computing {
+    animation: pulse 0.5s ease;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); color: var(--accent); }
+    100% { transform: scale(1); }
+  }
+
+  /* Natural Language Input */
+  .nl-input-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .nl-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+
+  .nl-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229,62,62,0.15);
+  }
+
+  .nl-input::placeholder { color: var(--text-secondary); opacity: 0.65; }
+
+  .nl-send-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), #c53030);
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--btn-transition);
+    flex-shrink: 0;
+  }
+
+  .nl-send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 15px var(--glow-color); }
+
+  /* Mode Toggle */
+  .mode-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 16px;
+    gap: 4px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: var(--btn-transition);
+  }
+
+  .mode-btn.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 8px var(--glow-color);
+  }
+
+  /* Buttons Grid */
+  .buttons-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .grid-standard {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .grid-scientific {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  /* Button Base */
+  .calc-btn {
+    border: none;
+    font-family: var(--font-main);
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 18px 8px;
+    transition: var(--btn-transition);
+    position: relative;
+    overflow: hidden;
+    color: var(--text-primary);
+    background: var(--btn-number);
+    border-radius: var(--radius-btn);
+  }
+
+  .calc-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+
+  .calc-btn:active::after {
+    width: 200px;
+    height: 200px;
+  }
+
+  .calc-btn:hover { transform: translateY(-2px); }
+  .calc-btn:active { transform: translateY(0) scale(0.97); }
+
+  .btn-operator { background: var(--btn-operator); color: white; }
+  .btn-function { background: var(--btn-function); font-size: 16px; }
+  .btn-equals { background: var(--btn-equals); color: white; }
+  .btn-clear { background: var(--btn-clear); color: #1a1a2e; }
+  .btn-special { font-size: 14px; opacity: 0.9; }
+
+  /* Button Style Variations */
+  .style-rounded .calc-btn { border-radius: 50%; padding: 22px; aspect-ratio: 1; }
+  .style-rounded .btn-equals { border-radius: 50%; aspect-ratio: 1; }
+
+  .style-square .calc-btn { border-radius: 4px; font-size: 22px; padding: 20px 8px; }
+  .style-square .btn-equals { border-radius: 4px; }
+
+  .style-neon .calc-btn {
+    background: transparent;
+    border: 2px solid var(--accent);
+    color: var(--text-primary);
+    box-shadow: 0 0 10px rgba(229,62,62,0.2), inset 0 0 10px rgba(229,62,62,0.05);
+  }
+  .style-neon .calc-btn:hover {
+    box-shadow: 0 0 25px var(--glow-color), inset 0 0 20px rgba(229,62,62,0.15);
+    background: rgba(229,62,62,0.1);
+  }
+  .style-neon .btn-operator { border-color: #38a169; box-shadow: 0 0 10px rgba(56,161,105,0.2); }
+  .style-neon .btn-equals { border-color: #d69e2e; }
+
+  .style-glass .calc-btn {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .style-glass .calc-btn:hover { background: rgba(255,255,255,0.15); }
+  .style-glass .btn-operator { background: rgba(229,62,62,0.3); border-color: rgba(229,62,62,0.4); }
+  .style-glass .btn-equals { background: rgba(56,161,105,0.3); border-color: rgba(56,161,105,0.4); }
+
+  /* Scientific Panel */
+  .scientific-panel {
+    display: none;
+    margin-bottom: 12px;
+  }
+
+  .scientific-panel.active { display: block; }
+
+  .sci-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .sci-btn {
+    padding: 12px 4px;
+    font-size: 13px;
+    background: rgba(49,130,206,0.2);
+    border: 1px solid rgba(49,130,206,0.3);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    cursor: pointer;
+    transition: var(--btn-transition);
+  }
+
+  .sci-btn:hover { background: rgba(49,130,206,0.4); transform: translateY(-1px); }
+  .sci-btn:active { transform: scale(0.95); }
+
+  /* Theme & Style Panels */
+  .panel-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(5px);
+    z-index: 100;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .panel-overlay.active { display: flex; }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .panel-content {
+    background: var(--bg-secondary);
+    border-radius: 24px;
+    padding: 32px;
+    max-width: 440px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  @keyframes slideUp { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+  .panel-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .panel-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .theme-option {
+    padding: 16px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--btn-transition);
+    border: 2px solid transparent;
+    position: relative;
+  }
+
+  .theme-option:hover { transform: translateY(-3px); }
+  .theme-option.active { border-color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+
+  .theme-option.active::after {
+    content: '✓';
+    position: absolute;
+    top: 6px; right: 8px;
+    font-size: 12px;
+    background: white;
+    color: #1a1a2e;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  .theme-preview {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    margin: 0 auto 8px;
+    display: flex;
+    gap: 3px;
+    padding: 6px;
+  }
+
+  .theme-preview span {
+    flex: 1;
+    border-radius: 3px;
+    display: block;
+  }
+
+  .theme-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .theme-option.active .theme-name { color: white; }
+
+  /* Theme Definitions */
+  .t-dark { background: #1a1a2e; }
+  .t-dark span:nth-child(1) { background: #e53e3e; }
+  .t-dark span:nth-child(2) { background: #38a169; }
+  .t-dark span:nth-child(3) { background: #2d3748; }
+
+  .t-ocean { background: #0c2340; }
+  .t-ocean span:nth-child(1) { background: #1e88e5; }
+  .t-ocean span:nth-child(2) { background: #00acc1; }
+  .t-ocean span:nth-child(3) { background: #1a3a5c; }
+
+  .t-sunset { background: #2d1b69; }
+  .t-sunset span:nth-child(1) { background: #ff6b6b; }
+  .t-sunset span:nth-child(2) { background: #ffa07a; }
+  .t-sunset span:nth-child(3) { background: #4a2c8a; }
+
+  .t-forest { background: #1a2f1a; }
+  .t-forest span:nth-child(1) { background: #66bb6a; }
+  .t-forest span:nth-child(2) { background: #43a047; }
+  .t-forest span:nth-child(3) { background: #2e4a2e; }
+
+  .t-neonCity { background: #0d0d0d; }
+  .t-neonCity span:nth-child(1) { background: #ff00ff; }
+  .t-neonCity span:nth-child(2) { background: #00ffff; }
+  .t-neonCity span:nth-child(3) { background: #1a1a2e; }
+
+  .t-light { background: #f5f5f5; }
+  .t-light span:nth-child(1) { background: #4a90d9; }
+  .t-light span:nth-child(2) { background: #67b26f; }
+  .t-light span:nth-child(3) { background: #e8e8e8; }
+
+  /* Style Options */
+  .style-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .style-option {
+    padding: 20px 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: var(--btn-transition);
+    border: 2px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    position: relative;
+  }
+
+  .style-option:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.2); }
+  .style-option.active { border-color: var(--accent); background: rgba(229,62,62,0.1); }
+
+  .style-preview-btns {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .sp { width: 28px; height: 28px; background: rgba(255,255,255,0.1); display: block; }
+  .sp-rd { border-radius: 50%; }
+  .sp-sq { border-radius: 4px; }
+  .sp-nn { border: 2px solid rgba(255,255,255,0.3); background: transparent; border-radius: 10px; }
+  .sp-gs { backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2); border-radius: 14px; background: rgba(255,255,255,0.08); }
+
+  .style-name { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+  .style-option.active .style-name { color: white; }
+
+  /* History Panel */
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--btn-transition);
+    border: 1px solid transparent;
+  }
+
+  .history-item:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.1); }
+
+  .hist-expr { font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .hist-result { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent); }
+
+  .history-empty { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+  .history-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+
+  /* Steps Panel */
+  .steps-content { max-height: 400px; overflow-y: auto; }
+  .step-item {
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .step-label { color: var(--text-secondary); font-size: 12px; margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Panel Close */
+  .panel-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--btn-transition);
+  }
+
+  .panel-close:hover { background: rgba(255,255,255,0.2); transform: rotate(90deg); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    body { padding: 12px; align-items: flex-start; }
+    .app-container { margin: 8px 0; }
+    .calc-body { padding: 16px; border-radius: 22px; }
+    .result-display { font-size: 36px; }
+    .calc-btn { padding: 16px 6px; font-size: 18px; }
+    .theme-grid { grid-template-columns: repeat(2, 1fr); }
+    .panel-content { padding: 26px 20px; max-height: 88vh; }
+  }
+
+  @media (max-width: 360px) {
+    body { padding: 8px; }
+    .calc-body { padding: 12px; }
+    .display-container { min-height: 132px; padding: 18px; }
+    .result-display { font-size: 32px; }
+    .buttons-grid { gap: 7px; }
+    .calc-btn { padding: 14px 4px; font-size: 17px; }
+    .sci-grid { gap: 5px; }
+    .sci-btn { padding: 10px 2px; font-size: 11px; }
+    .mode-btn { padding: 8px 5px; font-size: 12px; }
+  }
+
+  /* Memory indicator */
+  .memory-indicator {
+    position: absolute;
+    top: 10px; left: 14px;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 2;
+  }
+
+  .memory-indicator.active { opacity: 1; }
+
+  /* Degree/Radian indicator */
+  .angle-indicator {
+    position: absolute;
+    top: 10px; right: 14px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    z-index: 2;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--accent);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 200;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <!-- Header -->
+  <div class="calc-header">
+    <div class="logo">OmniCalc<span>Pro</span></div>
+    <div class="header-buttons">
+      <button class="icon-btn" onclick="openPanel('history')" title="Histórico">📜</button>
+      <button class="icon-btn" onclick="openPanel('themes')" title="Temas & Estilos">🎨</button>
+    </div>
+  </div>
+
+  <!-- Calculator Body -->
+  <div class="calc-body">
+    <!-- Display -->
+    <div class="display-container">
+      <span class="memory-indicator" id="memIndicator">M</span>
+      <span class="angle-indicator" id="angleIndicator">DEG</span>
+      <div class="history-display" id="historyDisplay"></div>
+      <div class="expression-display" id="exprDisplay"></div>
+      <div class="result-display" id="resultDisplay">0</div>
+    </div>
+
+    <!-- Natural Language Input -->
+    <div class="nl-input-container">
+      <input type="text" class="nl-input" id="nlInput" placeholder='💡 Digite em português: "quadrado de 15"' />
+      <button class="nl-send-btn" onclick="processNL()" title="Processar linguagem natural">▶</button>
+    </div>
+
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnStandard" onclick="setMode('standard')">Padrão</button>
+      <button class="mode-btn" id="btnScientific" onclick="setMode('scientific')">Científica</button>
+      <button class="mode-btn" id="btnMemory" onclick="toggleMemPanel()">Memória</button>
+    </div>
+
+    <!-- Scientific Panel -->
+    <div class="scientific-panel" id="sciPanel">
+      <div class="sci-grid">
+        <button class="sci-btn" onclick="insertFunc('sin(')">sin</button>
+        <button class="sci-btn" onclick="insertFunc('cos(')">cos</button>
+        <button class="sci-btn" onclick="insertFunc('tan(')">tan</button>
+        <button class="sci-btn" onclick="insertFunc('log(')">log</button>
+        <button class="sci-btn" onclick="toggleAngle()">DEG/RAD</button>
+        <button class="sci-btn" onclick="insertFunc('asin(')">sin⁻¹</button>
+        <button class="sci-btn" onclick="insertFunc('acos(')">cos⁻¹</button>
+        <button class="sci-btn" onclick="insertFunc('atan(')">tan⁻¹</button>
+        <button class="sci-btn" onclick="insertFunc('ln(')">ln</button>
+        <button class="sci-btn" onclick="insertFunc('√(')">√x</button>
+        <button class="sci-btn" onclick="insertFunc('cbrt(')">∛x</button>
+        <button class="sci-btn" onclick="insertText('^')">xⁿ</button>
+        <button class="sci-btn" onclick="insertFunc('abs(')">|x|</button>
+        <button class="sci-btn" onclick="insertText('π')">π</button>
+        <button class="sci-btn" onclick="insertText('e')">e</button>
+        <button class="sci-btn" onclick="insertFunc('fact(')">n!</button>
+        <button class="sci-btn" onclick="insertFunc('10^(')">10ˣ</button>
+        <button class="sci-btn" onclick="insertText('(')">(</button>
+        <button class="sci-btn" onclick="insertText(')')">)</button>
+        <button class="sci-btn" onclick="insertText('%')">%</button>
+      </div>
+    </div>
+
+    <!-- Memory Panel (inline) -->
+    <div id="memPanel" style="display:none; margin-bottom: 12px;">
+      <div style="display:grid; grid-template-columns: repeat(5,1fr); gap:8px;">
+        <button class="sci-btn" onclick="memClear()" title="Limpar memória">MC</button>
+        <button class="sci-btn" onclick="memRecall()" title="Recuperar memória">MR</button>
+        <button class="sci-btn" onclick="memAdd()" title="Adicionar à memória">M+</button>
+        <button class="sci-btn" onclick="memSub()" title="Subtrair da memória">M−</button>
+        <button class="sci-btn" onclick="memStore()" title="Armazenar na memória">MS</button>
+      </div>
+    </div>
+
+    <!-- Standard Buttons -->
+    <div class="buttons-grid grid-standard" id="btnGrid">
+      <button class="calc-btn btn-clear" onclick="clearAll()">AC</button>
+      <button class="calc-btn btn-function btn-special" onclick="backspace()">⌫</button>
+      <button class="calc-btn btn-function" onclick="insertText('%')">%</button>
+      <button class="calc-btn btn-operator" onclick="insertText('÷')">÷</button>
+
+      <button class="calc-btn" onclick="insertText('7')">7</button>
+      <button class="calc-btn" onclick="insertText('8')">8</button>
+      <button class="calc-btn" onclick="insertText('9')">9</button>
+      <button class="calc-btn btn-operator" onclick="insertText('×')">×</button>
+
+      <button class="calc-btn" onclick="insertText('4')">4</button>
+      <button class="calc-btn" onclick="insertText('5')">5</button>
+      <button class="calc-btn" onclick="insertText('6')">6</button>
+      <button class="calc-btn btn-operator" onclick="insertText('−')">−</button>
+
+      <button class="calc-btn" onclick="insertText('1')">1</button>
+      <button class="calc-btn" onclick="insertText('2')">2</button>
+      <button class="calc-btn" onclick="insertText('3')">3</button>
+      <button class="calc-btn btn-operator" onclick="insertText('+')">+</button>
+
+      <button class="calc-btn" onclick="toggleSign()">±</button>
+      <button class="calc-btn" onclick="insertText('0')">0</button>
+      <button class="calc-btn" onclick="insertText('.')">.</button>
+      <button class="calc-btn btn-equals" onclick="calculate()">=</button>
+    </div>
+
+    <!-- Steps button -->
+    <div style="text-align:center; margin-top:14px;">
+      <button class="sci-btn" onclick="openPanel('steps')" id="stepsBtn" style="width:100%; padding:12px; display:none;">📐 Ver Passo a Passo</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center; margin-top:16px; font-size:12px; color:var(--text-secondary); opacity:0.5;">
+    OmniCalc Pro • Use o teclado ou clique nos botões
+  </div>
+</div>
+
+<!-- Theme Panel -->
+<div class="panel-overlay" id="themePanel">
+  <div class="panel-content" style="position:relative;">
+    <button class="panel-close" onclick="closePanels()">✕</button>
+    <h2 class="panel-title">🎨 Temas & Estilos</h2>
+    <p class="panel-subtitle">Personalize a aparência da calculadora</p>
+
+    <h3 style="font-size:15px; margin-bottom:14px; color:var(--text-secondary); font-weight:600;">ESCOLHA O TEMA</h3>
+    <div class="theme-grid" id="themeGrid"></div>
+
+    <h3 style="font-size:15px; margin-bottom:14px; color:var(--text-secondary); font-weight:600;">ESTILO DOS BOTÕES</h3>
+    <div class="style-grid" id="styleGrid"></div>
+  </div>
+</div>
+
+<!-- History Panel -->
+<div class="panel-overlay" id="historyPanel">
+  <div class="panel-content" style="position:relative;">
+    <button class="panel-close" onclick="closePanels()">✕</button>
+    <h2 class="panel-title">📜 Histórico</h2>
+    <p class="panel-subtitle">Seus cálculos anteriores — clique para reutilizar</p>
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <button class="sci-btn" onclick="clearHistory()" style="flex:1;">🗑️ Limpar Histórico</button>
+      <button class="sci-btn" onclick="exportHistory()" style="flex:1;">📋 Copiar Tudo</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">
+        <div class="history-empty-icon">🧮</div>
+        <p>Nenhum cálculo ainda.<br>Comece a calcular!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Steps Panel -->
+<div class="panel-overlay" id="stepsPanel">
+  <div class="panel-content" style="position:relative;">
+    <button class="panel-close" onclick="closePanels()">✕</button>
+    <h2 class="panel-title">📐 Passo a Passo</h2>
+    <p class="panel-subtitle">Como chegamos ao resultado</p>
+    <div class="steps-content" id="stepsContent">
+      <div class="history-empty">
+        <div class="history-empty-icon">🔢</div>
+        <p>Faça um cálculo para ver os passos.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== STATE ====================
+let currentExpr = '';
+let lastResult = '0';
+let lastNumericResult = 0;
+let historyDisplayText = '';
+let memory = 0;
+let hasMemory = false;
+let isDegreeMode = true;
+let calculationHistory = [];
+let lastSteps = [];
+let toastTimer = null;
+
+const themes = {
+  dark: {
+    name: 'Dark',
+    vars: {
+      '--bg-primary': '#1a1a2e', '--bg-secondary': '#16213e', '--bg-display': '#0f3460',
+      '--text-primary': '#ffffff', '--text-secondary': '#a0aec0',
+      '--btn-number': '#2d3748', '--btn-operator': '#e53e3e',
+      '--btn-function': '#3182ce', '--btn-equals': '#38a169',
+      '--btn-clear': '#d69e2e', '--accent': '#e53e3e',
+      '--shadow-color': 'rgba(0,0,0,0.3)', '--glow-color': 'rgba(229,62,62,0.4)'
+    }
+  },
+  ocean: {
+    name: 'Ocean',
+    vars: {
+      '--bg-primary': '#071b3e', '--bg-secondary': '#0c2340', '--bg-display': '#0a1f3d',
+      '--text-primary': '#e0f7fa', '--text-secondary': '#80cbc4',
+      '--btn-number': '#1a3a5c', '--btn-operator': '#1e88e5',
+      '--btn-function': '#0097a7', '--btn-equals': '#00bcd4',
+      '--btn-clear': '#ff8f00', '--accent': '#1e88e5',
+      '--shadow-color': 'rgba(0,0,0,0.4)', '--glow-color': 'rgba(30,136,229,0.4)'
+    }
+  },
+  sunset: {
+    name: 'Sunset',
+    vars: {
+      '--bg-primary': '#1a0a2e', '--bg-secondary': '#2d1b69', '--bg-display': '#1f0f3c',
+      '--text-primary': '#fce4ec', '--text-secondary': '#ce93d8',
+      '--btn-number': '#4a2c8a', '--btn-operator': '#ff5252',
+      '--btn-function': '#ab47bc', '--btn-equals': '#ffa07a',
+      '--btn-clear': '#ffd54f', '--accent': '#ff6b6b',
+      '--shadow-color': 'rgba(0,0,0,0.3)', '--glow-color': 'rgba(255,107,107,0.4)'
+    }
+  },
+  forest: {
+    name: 'Forest',
+    vars: {
+      '--bg-primary': '#0d1f0d', '--bg-secondary': '#1a2f1a', '--bg-display': '#0f1f0f',
+      '--text-primary': '#e8f5e9', '--text-secondary': '#a5d6a7',
+      '--btn-number': '#2e4a2e', '--btn-operator': '#66bb6a',
+      '--btn-function': '#43a047', '--btn-equals': '#81c784',
+      '--btn-clear': '#ffb74d', '--accent': '#66bb6a',
+      '--shadow-color': 'rgba(0,0,0,0.3)', '--glow-color': 'rgba(102,187,106,0.4)'
+    }
+  },
+  neonCity: {
+    name: 'Neon City',
+    vars: {
+      '--bg-primary': '#0d0d0d', '--bg-secondary': '#1a1a2e', '--bg-display': '#0f0f1a',
+      '--text-primary': '#ffffff', '--text-secondary': '#ff00ff',
+      '--btn-number': '#1a1a2e', '--btn-operator': '#ff00ff',
+      '--btn-function': '#00ffff', '--btn-equals': '#39ff14',
+      '--btn-clear': '#ffff00', '--accent': '#ff00ff',
+      '--shadow-color': 'rgba(255,0,255,0.2)', '--glow-color': 'rgba(255,0,255,0.4)'
+    }
+  },
+  light: {
+    name: 'Light',
+    vars: {
+      '--bg-primary': '#e8eaf6', '--bg-secondary': '#ffffff', '--bg-display': '#f5f5ff',
+      '--text-primary': '#1a1a2e', '--text-secondary': '#7986cb',
+      '--btn-number': '#e8eaf6', '--btn-operator': '#4a90d9',
+      '--btn-function': '#7986cb', '--btn-equals': '#67b26f',
+      '--btn-clear': '#f39c12', '--accent': '#4a90d9',
+      '--shadow-color': 'rgba(0,0,0,0.1)', '--glow-color': 'rgba(74,144,217,0.3)'
+    }
+  }
+};
+
+const btnStyles = {
+  modern: { name: 'Modernos', class: '' },
+  rounded: { name: 'Redondos', class: 'style-rounded' },
+  square: { name: 'Quadrados', class: 'style-square' },
+  neon: { name: 'Neon', class: 'style-neon' },
+  glass: { name: 'Glass', class: 'style-glass' }
+};
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('omnicalc_state');
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.theme) applyTheme(s.theme, false);
+      if (s.style) applyStyle(s.style, false);
+      calculationHistory = s.history || [];
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('omnicalc_state', JSON.stringify({
+      theme: currentThemeName,
+      style: currentStyleName,
+      history: calculationHistory.slice(-50)
+    }));
+  } catch(e) {}
+}
+
+// ==================== THEMES & STYLES ====================
+let currentThemeName = 'dark';
+let currentStyleName = 'modern';
+
+function buildThemeGrid() {
+  const grid = document.getElementById('themeGrid');
+  grid.innerHTML = '';
+  Object.entries(themes).forEach(([key, theme]) => {
+    const div = document.createElement('div');
+    div.className = `theme-option t-${key} ${currentThemeName === key ? 'active' : ''}`;
+    div.onclick = () => applyTheme(key);
+    div.innerHTML = `<div class="theme-preview"><span></span><span></span><span></span></div><div class="theme-name">${theme.name}</div>`;
+    grid.appendChild(div);
+  });
+}
+
+function buildStyleGrid() {
+  const grid = document.getElementById('styleGrid');
+  grid.innerHTML = '';
+  Object.entries(btnStyles).forEach(([key, style]) => {
+    const div = document.createElement('div');
+    div.className = `style-option ${currentStyleName === key ? 'active' : ''}`;
+    const shapes = { modern: '', rounded: 'sp-rd', square: 'sp-sq', neon: 'sp-nn', glass: 'sp-gs' };
+    const cls = shapes[key] || '';
+    div.innerHTML = `
+      <div class="style-preview-btns"><span class="sp ${cls}"></span><span class="sp ${cls}"></span><span class="sp ${cls}"></span></div>
+      <div class="style-name">${style.name}</div>`;
+    div.onclick = () => applyStyle(key);
+    grid.appendChild(div);
+  });
+}
+
+function applyTheme(name, showToast = true) {
+  currentThemeName = name;
+  const t = themes[name];
+  Object.entries(t.vars).forEach(([prop, val]) => document.documentElement.style.setProperty(prop, val));
+  buildThemeGrid();
+  saveState();
+  if (showToast) toast(`Tema "${t.name}" aplicado`);
+}
+
+function applyStyle(name, showToast = true) {
+  currentStyleName = name;
+  const body = document.querySelector('.calc-body');
+  Object.values(btnStyles).forEach(s => {
+    if (s.class) body.classList.remove(s.class);
+  });
+  if (btnStyles[name].class) body.classList.add(btnStyles[name].class);
+  buildStyleGrid();
+  saveState();
+  if (showToast) toast(`Estilo "${btnStyles[name].name}" aplicado`);
+}
+
+// ==================== CALCULATOR LOGIC ====================
+function insertText(text) {
+  const display = document.getElementById('resultDisplay');
+  if (display.textContent === '0' && !isNaN(text)) {
+    currentExpr = text;
+  } else {
+    currentExpr += text;
+  }
+  updateDisplay();
+}
+
+function insertFunc(func) {
+  currentExpr += func;
+  updateDisplay();
+}
+
+function clearAll() {
+  currentExpr = '';
+  lastResult = '0';
+  lastNumericResult = 0;
+  historyDisplayText = '';
+  document.getElementById('resultDisplay').textContent = '0';
+  document.getElementById('exprDisplay').textContent = '';
+  document.getElementById('historyDisplay').textContent = '';
+  document.getElementById('stepsBtn').style.display = 'none';
+  lastSteps = [];
+}
+
+function backspace() {
+  if (currentExpr.length > 0) {
+    // Remove function names as whole units
+    const funcPatterns = ['sin(', 'cos(', 'tan(', 'asin(', 'acos(', 'atan(', 'log(', 'ln(', '√(', 'cbrt(', 'abs(', 'fact(', '10^('];
+    let removed = false;
+    for (const p of funcPatterns) {
+      if (currentExpr.endsWith(p)) {
+        currentExpr = currentExpr.slice(0, -p.length);
+        removed = true;
+        break;
+      }
+    }
+    if (!removed) currentExpr = currentExpr.slice(0, -1);
+  }
+  updateDisplay();
+}
+
+function toggleSign() {
+  if (!currentExpr) return;
+  const evaluated = evaluateExpression(currentExpr);
+  if (evaluated.error) return toast('Não foi possível inverter o sinal');
+  const value = -evaluated.value;
+  document.getElementById('resultDisplay').textContent = formatNumber(value);
+  currentExpr = String(value);
+}
+
+function updateDisplay() {
+  document.getElementById('exprDisplay').textContent = historyDisplayText;
+  const clean = currentExpr.replace(/\^/g, '^');
+  document.getElementById('resultDisplay').textContent = clean || '0';
+}
+
+// ==================== EVALUATION ENGINE ====================
+function evaluateExpression(expr) {
+  try {
+    const tokens = tokenizeExpression(expr);
+    const parser = createMathParser(tokens);
+    const result = parser.parse();
+    if (!Number.isFinite(result)) throw new Error('Resultado inválido');
+    return { value: result, error: null };
+  } catch(e) {
+    return { value: null, error: e.message };
+  }
+}
+
+function tokenizeExpression(expr) {
+  const normalized = String(expr)
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/−/g, '-')
+    .replace(/,/g, '.')
+    .trim();
+  if (!normalized) throw new Error('Expressão vazia');
+
+  const tokens = [];
+  let index = 0;
+  while (index < normalized.length) {
+    const rest = normalized.slice(index);
+    const whitespace = rest.match(/^\s+/);
+    if (whitespace) { index += whitespace[0].length; continue; }
+
+    const number = rest.match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i);
+    if (number) {
+      const value = Number(number[0]);
+      if (!Number.isFinite(value)) throw new Error('Número inválido');
+      tokens.push({ type: 'number', value });
+      index += number[0].length;
+      continue;
+    }
+
+    const identifier = rest.match(/^(asin|acos|atan|cbrt|fact|sqrt|sin|cos|tan|log|ln|abs)/i);
+    if (identifier) {
+      tokens.push({ type: 'function', value: identifier[0].toLowerCase() });
+      index += identifier[0].length;
+      continue;
+    }
+
+    const char = normalized[index];
+    if (char === '√') tokens.push({ type: 'function', value: 'sqrt' });
+    else if (char === 'π') tokens.push({ type: 'constant', value: Math.PI });
+    else if (char === 'e' || char === 'E') tokens.push({ type: 'constant', value: Math.E });
+    else if ('+-*/^!%()'.includes(char)) tokens.push({ type: char, value: char });
+    else throw new Error(`Símbolo não permitido: ${char}`);
+    index++;
+  }
+  tokens.push({ type: 'eof' });
+  return tokens;
+}
+
+function createMathParser(tokens) {
+  let position = 0;
+  const current = () => tokens[position];
+  const consume = type => {
+    if (current().type !== type) throw new Error('Expressão incompleta');
+    return tokens[position++];
+  };
+  const startsImplicitFactor = token => ['number', 'constant', 'function', '('].includes(token.type);
+
+  function factorial(value) {
+    if (!Number.isInteger(value) || value < 0) throw new Error('Fatorial exige inteiro não negativo');
+    if (value > 170) throw new Error('Fatorial muito grande');
+    let result = 1;
+    for (let i = 2; i <= value; i++) result *= i;
+    return result;
+  }
+
+  function applyFunction(name, value) {
+    const toRadians = angle => isDegreeMode ? angle * Math.PI / 180 : angle;
+    const fromRadians = angle => isDegreeMode ? angle * 180 / Math.PI : angle;
+    const functions = {
+      sin: x => Math.sin(toRadians(x)),
+      cos: x => Math.cos(toRadians(x)),
+      tan: x => Math.tan(toRadians(x)),
+      asin: x => fromRadians(Math.asin(x)),
+      acos: x => fromRadians(Math.acos(x)),
+      atan: x => fromRadians(Math.atan(x)),
+      log: Math.log10,
+      ln: Math.log,
+      sqrt: Math.sqrt,
+      cbrt: Math.cbrt,
+      abs: Math.abs,
+      fact: factorial
+    };
+    const result = functions[name](value);
+    if (!Number.isFinite(result)) throw new Error(`Resultado inválido em ${name}`);
+    return result;
+  }
+
+  function parsePrimary() {
+    if (current().type === 'number' || current().type === 'constant') return tokens[position++].value;
+    if (current().type === '(') {
+      consume('(');
+      const value = parseAdditive();
+      consume(')');
+      return value;
+    }
+    if (current().type === 'function') {
+      const name = tokens[position++].value;
+      consume('(');
+      const value = parseAdditive();
+      consume(')');
+      return applyFunction(name, value);
+    }
+    throw new Error('Número ou função esperada');
+  }
+
+  function parsePostfix() {
+    let value = parsePrimary();
+    while (current().type === '!' || current().type === '%') {
+      value = current().type === '!' ? factorial(value) : value / 100;
+      position++;
+    }
+    return value;
+  }
+
+  function parsePower() {
+    const base = parsePostfix();
+    if (current().type === '^') {
+      position++;
+      return Math.pow(base, parseUnary());
+    }
+    return base;
+  }
+
+  function parseUnary() {
+    if (current().type === '+') { position++; return parseUnary(); }
+    if (current().type === '-') { position++; return -parseUnary(); }
+    return parsePower();
+  }
+
+  function parseMultiplicative() {
+    let value = parseUnary();
+    while (current().type === '*' || current().type === '/' || startsImplicitFactor(current())) {
+      if (current().type === '*') { position++; value *= parseUnary(); }
+      else if (current().type === '/') {
+        position++;
+        const divisor = parseUnary();
+        if (divisor === 0) throw new Error('Divisão por zero');
+        value /= divisor;
+      } else value *= parseUnary();
+    }
+    return value;
+  }
+
+  function parseAdditive() {
+    let value = parseMultiplicative();
+    while (current().type === '+' || current().type === '-') {
+      const operator = current().type;
+      position++;
+      value = operator === '+' ? value + parseMultiplicative() : value - parseMultiplicative();
+    }
+    return value;
+  }
+
+  return {
+    parse() {
+      const value = parseAdditive();
+      if (current().type !== 'eof') throw new Error('Expressão inválida');
+      return value;
+    }
+  };
+}
+
+// ==================== CALCULATE ====================
+function calculate() {
+  if (!currentExpr.trim()) return false;
+
+  const resultDisplay = document.getElementById('resultDisplay');
+  const exprDisplay = document.getElementById('exprDisplay');
+
+  historyDisplayText = currentExpr + ' =';
+  exprDisplay.textContent = historyDisplayText;
+
+  // Generate steps before evaluating
+  lastSteps = generateSteps(currentExpr);
+
+  const { value, error } = evaluateExpression(currentExpr);
+
+  if (error) {
+    resultDisplay.textContent = '⚠️ Erro';
+    resultDisplay.style.color = '#ff5252';
+    setTimeout(() => { resultDisplay.style.color = ''; }, 2000);
+    toast(error);
+    return false;
+  }
+
+  const formatted = formatNumber(value);
+  lastResult = formatted;
+  lastNumericResult = value;
+  currentExpr = String(value);
+
+  resultDisplay.textContent = formatted;
+  resultDisplay.classList.add('computing');
+  setTimeout(() => resultDisplay.classList.remove('computing'), 500);
+
+  // Save to history
+  calculationHistory.unshift({ expr: historyDisplayText, result: formatted, steps: lastSteps });
+  if (calculationHistory.length > 50) calculationHistory.pop();
+  saveState();
+
+  document.getElementById('stepsBtn').style.display = 'block';
+  return true;
+}
+
+function formatNumber(num) {
+  if (!isFinite(num)) return num > 0 ? '∞' : '-∞';
+  if (Number.isInteger(num) && Math.abs(num) < 1e15) return num.toLocaleString('pt-BR');
+  
+  const str = num.toPrecision(12);
+  const parsed = parseFloat(str);
+  
+  if (Math.abs(parsed) > 1e10 || (Math.abs(parsed) < 1e-6 && parsed !== 0)) {
+    return num.toExponential(6).replace(/\.?0+e/, 'e');
+  }
+  
+  const fixed = parseFloat(parsed.toFixed(10)).toString();
+  const parts = fixed.split('.');
+  parts[0] = parseInt(parts[0]).toLocaleString('pt-BR');
+  if (parts.length > 1) {
+    return parts.join(',');
+  }
+  return parts[0];
+}
+
+// ==================== STEPS GENERATOR ====================
+function generateSteps(expr) {
+  const steps = [];
+  
+  // Step 1: Original expression
+  steps.push({ label: 'Expressão original', content: expr });
+
+  // Parse and show intermediate steps
+  let processed = expr
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/−/g, '-');
+  
+  if (processed !== expr) {
+    steps.push({ label: 'Normalização', content: `Substituindo operadores: ${processed}` });
+  }
+
+  // Check for special operations
+  if (/!/g.test(processed)) {
+    const m = processed.match(/(\d+)!/);
+    if (m) {
+      let factSteps = '';
+      for (let i = parseInt(m[1]); i >= 1; i--) factSteps += `${i}×`;
+      factSteps = factSteps.slice(0, -1);
+      steps.push({ label: 'Fatorial', content: `${m[1]}! = ${factSteps}` });
+    }
+  }
+
+  if (/sin|cos|tan/g.test(processed)) {
+    const mode = isDegreeMode ? 'graus' : 'radianos';
+    steps.push({ label: 'Modo angular', content: `Funções trigonométricas em ${mode}` });
+  }
+
+  // Show power operations if any
+  if (/[\^]/.test(processed)) {
+    const parts = processed.split('^');
+    for (let i = 0; i < parts.length - 1; i++) {
+      steps.push({ label: `Potência ${i+1}`, content: `${parts[i]} elevado a ${parts[i+1]}` });
+    }
+  }
+
+  // Show percentage if any
+  if (/%/.test(processed)) {
+    steps.push({ label: 'Porcentagem', content: 'Convertendo porcentagens para decimal' });
+  }
+
+  const { value } = evaluateExpression(expr);
+  if (value !== null) {
+    steps.push({ label: 'Resultado final', content: `${formatNumber(value)}` });
+  }
+
+  return steps;
+}
+
+// ==================== NATURAL LANGUAGE PROCESSING ====================
+function processNL() {
+  const input = document.getElementById('nlInput').value.trim().toLowerCase();
+  if (!input) return;
+  const numberWords = {
+    zero: '0', um: '1', uma: '1', dois: '2', duas: '2', três: '3', quatro: '4',
+    cinco: '5', seis: '6', sete: '7', oito: '8', nove: '9', dez: '10',
+    onze: '11', doze: '12', treze: '13', quatorze: '14', quinze: '15',
+    dezesseis: '16', dezessete: '17', dezoito: '18', dezenove: '19', vinte: '20'
+  };
+  let text = input.normalize('NFC').replace(/\s+/g, ' ').trim();
+  for (const [word, number] of Object.entries(numberWords)) {
+    text = text.replace(new RegExp(`\\b${word}\\b`, 'g'), number);
+  }
+
+  const number = '(-?[\\d.,]+)';
+  const patterns = [
+    [new RegExp(`^(?:quadrado de)\\s*${number}$`), m => `(${m[1]})^2`],
+    [new RegExp(`^${number}\\s*(?:ao quadrado)$`), m => `(${m[1]})^2`],
+    [new RegExp(`^(?:cubo de)\\s*${number}$`), m => `(${m[1]})^3`],
+    [new RegExp(`^${number}\\s*(?:ao cubo)$`), m => `(${m[1]})^3`],
+    [new RegExp(`^(?:raiz quadrada de|raiz de)\\s*${number}$`), m => `sqrt(${m[1]})`],
+    [new RegExp(`^raiz cúbica de\\s*${number}$`), m => `cbrt(${m[1]})`],
+    [new RegExp(`^fatorial de\\s*${number}$`), m => `fact(${m[1]})`],
+    [new RegExp(`^${number}\\s*fatorial$`), m => `fact(${m[1]})`],
+    [new RegExp(`^potência de\\s*${number}\\s*por\\s*${number}$`), m => `(${m[1]})^(${m[2]})`],
+    [new RegExp(`^(?:elevar|eleve)\\s*${number}\\s*(?:a|ao)\\s*${number}$`), m => `(${m[1]})^(${m[2]})`],
+    [new RegExp(`^${number}\\s*elevado\\s*a\\s*${number}$`), m => `(${m[1]})^(${m[2]})`],
+    [new RegExp(`^seno(?: de)?\\s*${number}$`), m => `sin(${m[1]})`],
+    [new RegExp(`^cosseno(?: de)?\\s*${number}$`), m => `cos(${m[1]})`],
+    [new RegExp(`^tangente(?: de)?\\s*${number}$`), m => `tan(${m[1]})`],
+    [new RegExp(`^(?:logaritmo natural de|logaritmo natural|ln de|ln)\\s*${number}$`), m => `ln(${m[1]})`],
+    [new RegExp(`^(?:logaritmo de|logaritmo)\\s*${number}$`), m => `log(${m[1]})`]
+  ];
+
+  let expr = '';
+  for (const [pattern, build] of patterns) {
+    const match = text.match(pattern);
+    if (match) { expr = build(match); break; }
+  }
+
+  if (!expr) {
+    expr = text
+      .replace(/\bdividido\s+por\b|\bdividida\s+por\b|\bentre\b/g, '/')
+      .replace(/\bmultiplicado\s+por\b|\bmultiplicada\s+por\b|\bvezes\b|\bpor\b/g, '*')
+      .replace(/\bmais\b/g, '+')
+      .replace(/\bmenos\b/g, '-')
+      .replace(/\bpi\b/g, 'π');
+  }
+
+  currentExpr = expr.replace(/,/g, '.');
+  updateDisplay();
+  if (calculate()) {
+    document.getElementById('nlInput').value = '';
+    toast('Calculado! ✨');
+  }
+}
+
+// ==================== MEMORY FUNCTIONS ====================
+function memClear() {
+  memory = 0;
+  hasMemory = false;
+  updateMemIndicator();
+  toast('Memória limpa');
+}
+
+function memRecall() {
+  if (!hasMemory) return toast('Memória vazia');
+  currentExpr += String(memory);
+  updateDisplay();
+}
+
+function memAdd() {
+  memory += lastNumericResult;
+  hasMemory = true;
+  updateMemIndicator();
+  toast(`M+ → ${formatNumber(memory)}`);
+}
+
+function memSub() {
+  memory -= lastNumericResult;
+  hasMemory = true;
+  updateMemIndicator();
+  toast(`M− → ${formatNumber(memory)}`);
+}
+
+function memStore() {
+  memory = lastNumericResult;
+  hasMemory = true;
+  updateMemIndicator();
+  toast(`Memória → ${formatNumber(memory)}`);
+}
+
+function updateMemIndicator() {
+  document.getElementById('memIndicator').classList.toggle('active', hasMemory);
+}
+
+// ==================== MODES & KEYBOARD ====================
+function setMode(mode) {
+  const scientific = mode === 'scientific';
+  document.getElementById('sciPanel').classList.toggle('active', scientific);
+  document.getElementById('memPanel').style.display = 'none';
+  document.getElementById('btnStandard').classList.toggle('active', !scientific);
+  document.getElementById('btnScientific').classList.toggle('active', scientific);
+  document.getElementById('btnMemory').classList.remove('active');
+}
+
+function toggleMemPanel() {
+  const panel = document.getElementById('memPanel');
+  const willOpen = panel.style.display === 'none';
+  panel.style.display = willOpen ? 'block' : 'none';
+  document.getElementById('sciPanel').classList.remove('active');
+  document.getElementById('btnStandard').classList.toggle('active', !willOpen);
+  document.getElementById('btnScientific').classList.remove('active');
+  document.getElementById('btnMemory').classList.toggle('active', willOpen);
+}
+
+function toggleAngle() {
+  isDegreeMode = !isDegreeMode;
+  document.getElementById('angleIndicator').textContent = isDegreeMode ? 'DEG' : 'RAD';
+  toast(isDegreeMode ? 'Modo graus' : 'Modo radianos');
+}
+
+function setupKeyboard() {
+  document.addEventListener('keydown', event => {
+    if (event.target === document.getElementById('nlInput')) return;
+    const keyMap = { '*': '×', '/': '÷', '-': '−', ',': '.' };
+    if (/^[0-9.+\-*/%()^]$/.test(event.key) || event.key === ',') {
+      event.preventDefault();
+      insertText(keyMap[event.key] || event.key);
+    } else if (event.key === 'Enter' || event.key === '=') {
+      event.preventDefault();
+      calculate();
+    } else if (event.key === 'Backspace') {
+      event.preventDefault();
+      backspace();
+    } else if (event.key === 'Delete' || event.key === 'Escape') {
+      event.preventDefault();
+      clearAll();
+    }
+  });
+}
+
+// ==================== PANELS, HISTORY & FEEDBACK ====================
+function openPanel(name) {
+  closePanels();
+  if (name === 'themes') document.getElementById('themePanel').classList.add('active');
+  if (name === 'history') {
+    renderHistory();
+    document.getElementById('historyPanel').classList.add('active');
+  }
+  if (name === 'steps') {
+    renderSteps();
+    document.getElementById('stepsPanel').classList.add('active');
+  }
+}
+
+function closePanels() {
+  document.querySelectorAll('.panel-overlay').forEach(panel => panel.classList.remove('active'));
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+  if (!calculationHistory.length) {
+    const empty = document.createElement('div');
+    empty.className = 'history-empty';
+    empty.textContent = 'Nenhum cálculo ainda. Comece a calcular!';
+    list.appendChild(empty);
+    return;
+  }
+  calculationHistory.forEach(item => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'history-item';
+    row.style.textAlign = 'left';
+    row.style.color = 'inherit';
+    row.innerHTML = `<div class="hist-expr"></div><div class="hist-result"></div>`;
+    row.querySelector('.hist-expr').textContent = item.expr;
+    row.querySelector('.hist-result').textContent = item.result;
+    row.addEventListener('click', () => {
+      currentExpr = String(item.expr).replace(/\s*=\s*$/, '');
+      updateDisplay();
+      closePanels();
+    });
+    list.appendChild(row);
+  });
+}
+
+function clearHistory() {
+  calculationHistory = [];
+  saveState();
+  renderHistory();
+  toast('Histórico limpo');
+}
+
+async function exportHistory() {
+  if (!calculationHistory.length) return toast('Histórico vazio');
+  const text = calculationHistory.map(item => `${item.expr} ${item.result}`).join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Histórico copiado');
+  } catch (error) {
+    toast('Não foi possível copiar');
+  }
+}
+
+function renderSteps() {
+  const content = document.getElementById('stepsContent');
+  content.innerHTML = '';
+  if (!lastSteps.length) {
+    content.textContent = 'Faça um cálculo para ver os passos.';
+    return;
+  }
+  lastSteps.forEach(step => {
+    const item = document.createElement('div');
+    item.className = 'step-item';
+    const label = document.createElement('div');
+    label.className = 'step-label';
+    label.textContent = step.label;
+    const value = document.createElement('div');
+    value.textContent = step.content;
+    item.append(label, value);
+    content.appendChild(item);
+  });
+}
+
+function toast(message) {
+  const element = document.getElementById('toast');
+  element.textContent = message;
+  element.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => element.classList.remove('show'), 2200);
+}
+
+function init() {
+  loadState();
+  buildThemeGrid();
+  buildStyleGrid();
+  setupKeyboard();
+  updateMemIndicator();
+  document.getElementById('nlInput').addEventListener('keydown', event => {
+    if (event.key === 'Enter') processNL();
+  });
+  document.querySelectorAll('.panel-overlay').forEach(panel => {
+    panel.addEventListener('click', event => {
+      if (event.target === panel) closePanels();
+    });
+  });
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+</script>
+</body>
+</html>
